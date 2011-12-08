@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 echo "Top 10 hungry processes (Memory)"
 ps -auxf | sort -nr -k 4 | head -10
 

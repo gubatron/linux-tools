@@ -1,4 +1,4 @@
-#!/usr/bin/python                                                                                                                            
+#!/usr/bin/env python                                                                                                                            
 # Returns a report of all the IPs and the number of different TCP connections                                                               
 # they have opened to our server.                                                                                                            # ReWrote it in python for finer contrl                                                                                                       
 import sys
