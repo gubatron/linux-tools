@@ -1,0 +1,30 @@
+#!/usr/bin/python                                                                                                                            
+# Returns a report of all the IPs and the number of different TCP connections                                                               
+# they have opened to our server.                                                                                                            # ReWrote it in python for finer contrl                                                                                                       
+import sys
+import os
+ignore_below=5 #dont include ips in report if they have less connections than this
+suspects={}
+p = os.popen('netstat -atnp')
+ln = (p.readline()).strip()
+while ln != '':
+  ln = p.readline().strip()
+  if ln.startswith('tcp'):
+    ip=ln.split()[4].split(':')[0]
+    if ip not in ('','0.0.0.0',None):
+      if not suspects.has_key(ip):
+          suspects[ip]=1
+      else:
+          suspects[ip]+=1
+
+#Put the results into a list of tuples, so that we can sort the list by the first element of the tuple
+suspectsAsListOfTuples = []
+for x in suspects:
+  if suspects[x] >= ignore_below:
+    suspectsAsListOfTuples.append((suspects[x],x))
+
+suspectsAsListOfTuples.sort()
+suspectsAsListOfTuples.reverse()
+
+for t in suspectsAsListOfTuples:
+  print t[0],t[1]

@@ -1,0 +1,6 @@
+#!/bin/bash
+echo "Top 10 hungry processes (Memory)"
+ps -auxf | sort -nr -k 4 | head -10
+
+echo "Top 10 hungry processes (CPU)"
+ps -eo pcpu,pid,args | sort -k 1 -r | head -10
