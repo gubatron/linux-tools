@@ -1,0 +1,52 @@
+#!/usr/bin/env python
+"""
+Copyright (c) 2011 Angel Leon
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+---
+pskill - Kill a process by name or part of it's name (as seen on ps aux)
+
+usage: pskill <string>
+
+Motivation: pkill wasn't cutting it. And I got tired of doing ps aux | grep, then copying and pasting pids to kill -9.
+"""
+import os
+from sys import argv, exit
+
+def usage():
+  print "pskill. An alternative when pkill doesn't kill what you want it to."
+  print "\n"
+  print "usage: pskill <string>"
+  print "\n\n"
+  print "Tip: Look at how your process is described on the output of 'ps aux', pass that string or part of it to pskill."
+  print "It's ok to use spaces on your string, they will all be passed as one argument."
+  print "\n\n"
+  exit
+
+def pskill(processString):
+  """grep a process with a full blown string and kill it."""
+  p = os.popen('ps aux | grep "' + processString + '"')
+  lines = p.readlines()
+  p.close()
+
+  for x in lines:
+    if processString in x and \
+      'pskill' not in x and \
+      'grep' not in x:
+      print x
+      pid = x.replace('   ',' ').replace('  ',' ').split()[1]
+      print 'PID is',pid
+      print 'kill -9 '+pid
+      os.system('kill -9 '+pid)
+      break
+
+if __name__ == '__main__':
+  if len(argv) < 2:
+    usage()
+
+  pskill(' '.join(argv[1:]))
