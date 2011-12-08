@@ -8,10 +8,17 @@ All of the commands are available under the MIT License.
 Enjoy.
 
 pskill - Because pkill doesn't work the way I want to.
-connections - See how many ESTABLISHED connections you have.
-hungry - See which are the most resource hungry process.
-md5 - Because md5sum is too long.
-most_connections - See which IP addresses are connecting the most.
+
+connections - See how many ESTABLISHED connections exist now.
+
+hungry - See which are the most resource hungry process in the system.
+
+md5 - Because 'md5sum' is too long.
+
+most_connections - See which IP addresses have opened more connections to your machine.
+
 netspeed - See the transfer rates on your network adapter live.
+
 purgeTildes - Get rid of all the left over files emacs can leave recursively from where you stand
-rs - don't do 'sudo /etc/init.d/service restart', just do 'rs service'
+
+rs - Restart a service in /etc/init.d/ by just just doing 'rs service'
