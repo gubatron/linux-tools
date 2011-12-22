@@ -1,7 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 #===============Configuration====================================
-path="$HOME/backups"     # Colocar aquí la ruta a los logs
+path="$HOME/backups"     # Put here the root path
 older_than="30"          # Age of the files to delete in days.
 #================================================================
 
