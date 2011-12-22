@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
 #This script will erase all your test dbs on a postgres server
-#Use carefully, and JUST on testing enviroments.
+#Use carefully, and JUST on testing environments.
 '''
 How to use:
 1.- Log a postgres user:
@@ -9,12 +9,12 @@ $sudo su postgres
 2.- Go to postgres home:
 $cd
 3.- Copy this script on this location.
-$cp /path/clean_postgres_enviroment.py .
+$cp /path/clean_postgres_environment .
 4.- Change the variable: exclude to avoid delete productions not desired dbs
 5.- Comment Line 29 and mae a try.
 6.- Stop you OpenERP or Servers using your testing dbs.
 7.- Run it.
-$python clean_postgres_enviroment.py
+$python clean_postgres_environment
 '''
 import os
 os.popen('psql -l > /tmp/dblisttoclean.txt')
