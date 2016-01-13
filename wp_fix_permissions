@@ -1,0 +1,26 @@
+#!/bin/bash
+if [[ ! -f ./wp-config.php ]]; then
+  echo "Please execute wp_fix_permissions inside your wordpress root folder."
+  return 1
+fi
+
+echo "Fixing wordpress permissions..."
+
+sudo chmod 555 * -R
+sudo chmod 0664 wp-config.php
+sudo chmod 0775 wp-content/cache/** -R
+sudo chmod 0775 wp-content/cache/zencache/cache -R
+
+# upload folders should be rwx for webserver, but others should only just read.
+# this might still be a security whole because they might upload executables to upload/ folders...
+# if we don't have the folders themselves with x flag, then we get 403s.
+sudo chmod 0774 wp-content/uploads/* -R
+sudo touch wp-content/advanced-cache.php
+sudo chmod 644 wp-content/advanced-cache.php
+
+# wordpress vulnerable plugins may let malicious php code clone itself inside uploads folder
+# make all upload folder read only except the one for the current month.
+sudo chmod 554 wp-content/uploads/* -R
+sudo chmod 0776 `date +"wp-content/uploads/%Y/%m"`
+
+echo "wp_fix_permissions: Finished."
