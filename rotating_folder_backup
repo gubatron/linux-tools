@@ -1,0 +1,153 @@
+#!/usr/bin/env python3
+import os
+import time
+import argparse
+
+
+def zeroPad(number):
+    number = int(number)
+    if number < 10:
+        return '0'+str(number)
+    return str(number)
+
+
+def getOldBackups(backups_dir_path, max_days_to_keep):
+    """
+    Retrieve a list of paths that are considered old
+    """
+    MAX_AGE_IN_SECONDS = 24*60*60*int(max_days_to_keep)
+
+    old_backups = []
+    backups = os.listdir(backups_dir_path)
+
+    for backup in backups:
+        backup_full_path = backups_dir_path + os.path.sep + backup
+        last_modified = os.path.getmtime(backup_full_path)
+        age = time.time() - last_modified
+        if age > MAX_AGE_IN_SECONDS:
+            old_backups.append(backup_full_path)
+    return old_backups
+
+
+def backupTGZ(backup_name, backup_source_path, backup_destination_path):
+    """
+    Given a backup_name, backup source path (usually a folder e.g. /var/lib/mysql) this will
+    copy the source folder or source file into the backup_destination_path
+    tar it, gzip it under
+    backup_destination_path/backup_name.YYYY-MM-DD-at-HH-MM.tar.gz
+
+    If you invoke for example
+    backupTGZ('mysql','/var/lib/mysql','/mnt/mysql_backups')
+
+    You will end up with
+
+    /mnt/mysql_backups/mysql.2013-12-24-at-22-34-59.tar.gz
+    """
+    # remove trailing slashes off everything
+    (backup_name, backup_source_path, backup_destination_path) = [x.rstrip(
+        '/') for x in (backup_name, backup_source_path, backup_destination_path)]
+    t = time.gmtime()
+    untarred_destination_name = backup_name + '.' + str(t[0]) + '-' + str(zeroPad(t[1])) + '-' + str(
+        zeroPad(t[2])) + '-at-' + zeroPad(t[3]) + '-' + zeroPad(t[4]) + '-' + zeroPad(5)
+
+    cmd = 'cp -R -a ' + backup_source_path + ' ' + \
+        backup_destination_path + os.path.sep + untarred_destination_name
+    cmd += ' && '
+
+    cmd += 'tar cvfz ' + untarred_destination_name + '.tar.gz ' + \
+        backup_destination_path + os.path.sep + untarred_destination_name + os.path.sep
+    cmd += ' && '
+
+    cmd += 'mv ' + untarred_destination_name + \
+        '.tar.gz ' + backup_destination_path + os.path.sep
+    cmd += ' && '
+
+    cmd += 'chmod 777 ' + backup_destination_path + \
+        os.path.sep + untarred_destination_name + '.tar.gz'
+    cmd += ' && '
+
+    cmd += 'rm -fr ' + backup_destination_path + \
+        os.path.sep + untarred_destination_name
+    cmd += ' ;'
+
+    print(cmd)
+    os.system(cmd)
+
+
+def initialize_arg_parser(arg_parser):
+    arg_parser.add_argument(
+        '--backup-name',
+        '-n',
+        type=str,
+        help='The prefix name of the resulting .tgz file',
+        required=True
+    )
+    arg_parser.add_argument(
+        '--source-folder',
+        '-s',
+        type=str,
+        help='The source folder you want to backup',
+        required=True
+    )
+    arg_parser.add_argument(
+        '--target-folder',
+        '-t',
+        type=str,
+        help='The target folder where backups will be stored',
+        required=True
+    )
+    arg_parser.add_argument(
+        "--days",
+        "-d",
+        default=7,
+        type=int,
+        help="How many days you want to keep a backup until removing it on the next invocation. (Default is 7 days)"
+    )
+
+
+def validate_arguments(args) -> bool:
+    if not os.path.isdir(args.source_folder):
+        print(
+            f"\n\nInvalid source folder. {args.source_folder} does not exist\n\n")
+        return False
+
+    if not os.path.isdir(args.target_folder):
+        print(
+            f"\n\nInvalid target folder. {args.target_folder} does not exist\n\n")
+        return False
+
+    return True
+
+def remove_trailing_slashes_in_folders(args):
+    while args.source_folder.endswith('/'):
+        args.source_folder = args.source_folder[:-1]
+    while args.target_folder.endswith('/'):
+        args.target_folder = args.target_folder[:-1]
+
+def main():
+    arg_parser = argparse.ArgumentParser()
+    initialize_arg_parser(arg_parser)
+    print()
+    try:
+        args, _ = arg_parser.parse_known_args()
+    except:
+        print()
+        arg_parser.print_help()
+        print()
+        return
+
+    if not validate_arguments(args):
+        arg_parser.print_help()
+        print()
+        return
+    remove_trailing_slashes_in_folders(args)
+    backupTGZ(args.backup_name, args.source_folder, args.target_folder)
+    old_ones = getOldBackups(args.target_folder, args.days)
+    if len(old_ones) > 0:
+        for x in old_ones:
+            print(f"removing -> {x}\n")
+            os.remove(x)
+
+
+if __name__ == '__main__':
+    main()
