@@ -150,13 +150,7 @@ def main():
     arg_parser = argparse.ArgumentParser()
     initialize_arg_parser(arg_parser)
     print()
-    try:
-        args, _ = arg_parser.parse_known_args()
-    except:
-        print()
-        arg_parser.print_help()
-        print()
-        return
+    args, _ = arg_parser.parse_known_args()
 
     if not validate_arguments(args):
         arg_parser.print_help()
