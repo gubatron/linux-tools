@@ -24,3 +24,5 @@ netspeed - See the transfer rates on your network adapter live.
 purgeTildes - Get rid of all the left over files emacs can leave recursively from where you stand
 
 rs - Restart a service in /etc/init.d/ by just just doing 'rs service'
+
+ubuntu_upgrade - dist-upgrade, autoclean, autoremove
