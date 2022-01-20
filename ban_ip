@@ -1,0 +1,5 @@
+#!/bin/bash
+ban_ip() {
+ sudo iptables -A INPUT -s $1 -j DROP
+}
+ban_ip $1
