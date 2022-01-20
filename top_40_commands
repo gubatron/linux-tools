@@ -1,2 +1,2 @@
 #/usr/bin/env bash
-history | awk {'print $2 " " $3'} | sort | uniq -c | sort -nr | head -n 40
+history | awk {'print $2 " " $3'} | sort | uniq -c | sort -nr | head -40
