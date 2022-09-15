@@ -1,0 +1,18 @@
+#!/usr/bin/bash
+echo "Disk usage before cleanup"
+journalctl --disk-usage
+
+# All currently active journal files will be marked as archived
+sudo journalctl --rotate
+
+# Delete journal logs older than 2 days
+sudo journalctl --vacuum-time=2days
+
+#Delete log files until the disk space taken falls below the specified size
+sudo journalctl --vacuum-size=200M
+
+#Delete old logs and limit file number to 3
+sudo journalctl --vacuum-files=3
+
+echo "Disk usage after cleanup"
+journalctl --disk-usage
