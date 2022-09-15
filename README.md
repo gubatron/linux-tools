@@ -9,6 +9,8 @@ And please, please, fork this, add your own tools, and send back your pull reque
 
 Enjoy.
 
+`flush_logs` - rotate and empty journal logs safely
+
 `ban_ip` - Ban an IP or a range `ban_ip 34.22.1.9` `ban_ip 34.22.0.0/16` with iptables
 
 `pskill` - Because pkill doesn't work the way I want to.
