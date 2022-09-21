@@ -15,7 +15,9 @@ Enjoy.
 
 `pskill` - Because pkill doesn't work the way I want to.
 
-`connections` - See how many ESTABLISHED connections exist now.
+`connections` - See how many ESTABLISHED connections exist now. Same IP can be connected to multiple ports of our host.
+
+`unique_connections` - See how many ESTABLISHED unique connections exist now.
 
 `hungry` - See which are the most resource hungry process in the system.
 
