@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+#set -x
+
+# SYSLOG PATH IN LINUX
+SYSLOG_PATH=/var/log/system.log
+
+if [[ `uname -s` == 'Darwin' ]]
+then
+    echo "We are in Darwin"
+    SYSLOG_PATH=/private${SYSLOG_PATH}
+fi
+echo "Tail-effing ${SYSLOG_PATH}"
+tail -f ${SYSLOG_PATH}
