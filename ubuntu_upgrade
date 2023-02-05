@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-sudo apt-get dist-upgrade; sudo apt autoclean; sudo apt autoremove;
+sudo apt-get dist-upgrade -y; sudo apt autoclean; sudo apt autoremove;
