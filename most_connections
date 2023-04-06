@@ -12,7 +12,7 @@ while ln != '':
   if ln.startswith('tcp'):
     ip=ln.split()[4].split(':')[0]
     if ip not in ('','0.0.0.0',None):
-      if not suspects.has_key(ip):
+      if ip not in suspects:
           suspects[ip]=1
       else:
           suspects[ip]+=1
