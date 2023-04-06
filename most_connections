@@ -1,4 +1,4 @@
-#!/usr/bin/env python                                                                                                                            
+#!/usr/bin/env python3
 # Returns a report of all the IPs and the number of different TCP connections                                                               
 # they have opened to our server.                                                                                                            # ReWrote it in python for finer contrl                                                                                                       
 import sys
@@ -27,4 +27,4 @@ suspectsAsListOfTuples.sort()
 suspectsAsListOfTuples.reverse()
 
 for t in suspectsAsListOfTuples:
-  print t[0],t[1]
+  print(t[0],t[1])
