@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 '''
 rotating_folder_backup
-Copyright 2022 Angel Leon.
+Copyright 2022-2023 Angel Leon.
 Author: @gubatron
 
 Easily backup folders as .tgz files, automatically removing older backups.
@@ -20,6 +20,7 @@ limitations under the License.
 '''
 
 import os
+import shutil
 import time
 import argparse
 
@@ -162,7 +163,10 @@ def main():
     if len(old_ones) > 0:
         for x in old_ones:
             print(f"removing -> {x}\n")
-            os.remove(x)
+            if os.path.isfile(x):
+                os.remove(x)
+            elif os.path.isdir(x):
+                shutil.rmtree(x)
 
 
 if __name__ == '__main__':
