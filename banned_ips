@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+banned_ips() {
+ sudo iptables -L -n --line-numbers
+}
+banned_ips
