@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+if [ ! -d "certbot.d" ]; then
+	echo ""
+	echo "Error: No certbot.d folder has been created to store your LetsEncrypt account config and certs in this folder"
+  echo ""
+  exit 1
+fi
+
+certbot renew --work-dir certbot.d --config-dir certbot.d --logs-dir certbot.d

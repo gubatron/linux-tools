@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+ASSUMES_STR="Assumes a certbot.d folder exists on the folder the command is invoked on."
+if [ $# -eq 0 ]; then
+	echo ""
+	echo "Usage: cert_wildcard_request <domain_name>"
+	echo ""
+	echo "${ASSUMES_STR}"
+	echo ""
+  exit 1
+fi		
+
+if [ $1 == "--help" ] || [ $1 == "-h" ] ; then
+	echo ""
+  echo "cert_wildcard_request : Request a new wildcard certificate and with a DNS challenge."
+	echo ""
+	echo "${ASSUMES_STR}"
+	echo ""
+  exit 0
+fi
+
+if [ -d "certbot.d" ]; then
+  rm -fr certbot.d
+fi
+
+mkdir certbot.d
+
+`dbtc_export_env_aws_access_keys`
+
+#NOTE: 'The requested dns-route53 plugin does not appear to be installed'
+# -> sudo pip install certbot-route53
+# or
+# -> sudo apt install python3-certbot-dns-route53
+
+certbot certonly \
+  --dns-route53 \
+  --dns-route53-propagation-seconds 20 \
+  --email=gubatron@gmail.com \
+  --server https://acme-v02.api.letsencrypt.org/directory \
+  --agree-tos \
+  --config-dir certbot.d \
+  --work-dir certbot.d \
+  --logs-dir certbot.d \
+  -d *.$1 -d $1
