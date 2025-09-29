@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+unban_ip() {
+ sudo iptables -D INPUT -s $1 -j DROP
+}
+unban_ip $1
