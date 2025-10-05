@@ -4,10 +4,19 @@
 trim_trailing_whitespace() {
     local recursive=0
     local files=()
-    local item process_file
+    local item process_file sed_i_arg
 
-    # --- 1. Argument Parsing ---
-    # Process options until we run out of them or hit a non-option argument
+    # Determine the correct sed -i syntax (Linux vs. macOS/BSD)
+    # The empty string '' is only required on BSD/macOS sed
+    if [[ "$(uname)" == "Darwin" ]]; then
+        # macOS/BSD sed requires the backup extension argument
+        sed_i_arg='-i ""'
+    else
+        # Linux (GNU) sed does not require or accept a separate argument for no backup
+        sed_i_arg='-i'
+    fi
+
+    # --- 1. Argument Parsing (Same as before) ---
     while [[ "$#" -gt 0 ]]; do
         case "$1" in
             -r|--recursive)
@@ -27,9 +36,8 @@ trim_trailing_whitespace() {
                 return 1
                 ;;
             *)
-                # Stop processing options and treat remaining as files/directories
                 files+=("$@")
-                break # Exit the while loop to process files
+                break
                 ;;
         esac
     done
@@ -37,15 +45,18 @@ trim_trailing_whitespace() {
     # --- 2. Check for Files/Directories ---
     if [ ${#files[@]} -eq 0 ]; then
         echo "Error: No files or directories provided." >&2
-        trim_trailing_whitespace --help # Show usage guide
+        trim_trailing_whitespace --help
         return 1
     fi
 
     # --- 3. Core Trailing Whitespace Removal Logic ---
     process_file() {
         local file="$1"
-        # The macOS/BSD-compatible sed command
-        sed -i '' 's/[[:space:]]*$//' "$file"
+
+        # Use eval to correctly execute the sed command with the determined -i argument
+        # We wrap the substitution command in a single string for proper evaluation
+        eval "sed ${sed_i_arg} 's/[[:space:]]*$//' \"\$file\""
+
         echo "  [CLEANED] $file"
     }
 
@@ -55,9 +66,9 @@ trim_trailing_whitespace() {
             process_file "$item"
         elif [ -d "$item" ]; then
             if [ "$recursive" -eq 1 ]; then
-                # Safe recursive processing using find, sed is executed directly for safety
                 echo "Processing directory recursively: $item"
-                find "$item" -type f -exec sed -i '' 's/[[:space:]]*$//' {} \;
+                # Use find and shell expansion to correctly apply the determined sed command
+                find "$item" -type f -exec bash -c "sed ${sed_i_arg} 's/[[:space:]]*$//' \"\$0\"" {} \;
                 echo "  [CLEANED] All files in $item (recursively)"
             else
                 echo "Error: '$item' is a directory. Use the -r or --recursive flag to process contents." >&2
@@ -69,4 +80,5 @@ trim_trailing_whitespace() {
     done
 }
 
+# CRITICAL: Execute the function with the script's arguments
 trim_trailing_whitespace "$@"
