@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+
+# Function to remove all trailing whitespace (spaces and tabs) from files
+trim_trailing_whitespace() {
+    local recursive=0
+    local files=()
+    local item process_file
+
+    # --- 1. Argument Parsing ---
+    # Process options until we run out of them or hit a non-option argument
+    while [[ "$#" -gt 0 ]]; do
+        case "$1" in
+            -r|--recursive)
+                recursive=1
+                shift
+                ;;
+            -h|--help)
+                echo "Usage: trim_trailing_whitespace [OPTIONS] <file_or_directory1> [file_or_directory2]..."
+                echo ""
+                echo "Options:"
+                echo "  -r, --recursive   Process files in directories recursively."
+                echo "  -h, --help        Show this help message."
+                return 0
+                ;;
+            -*)
+                echo "Error: Unknown option '$1'" >&2
+                return 1
+                ;;
+            *)
+                # Stop processing options and treat remaining as files/directories
+                files+=("$@")
+                break # Exit the while loop to process files
+                ;;
+        esac
+    done
+
+    # --- 2. Check for Files/Directories ---
+    if [ ${#files[@]} -eq 0 ]; then
+        echo "Error: No files or directories provided." >&2
+        trim_trailing_whitespace --help # Show usage guide
+        return 1
+    fi
+
+    # --- 3. Core Trailing Whitespace Removal Logic ---
+    process_file() {
+        local file="$1"
+        # The macOS/BSD-compatible sed command
+        sed -i '' 's/[[:space:]]*$//' "$file"
+        echo "  [CLEANED] $file"
+    }
+
+    # --- 4. Process the Arguments ---
+    for item in "${files[@]}"; do
+        if [ -f "$item" ]; then
+            process_file "$item"
+        elif [ -d "$item" ]; then
+            if [ "$recursive" -eq 1 ]; then
+                # Safe recursive processing using find, sed is executed directly for safety
+                echo "Processing directory recursively: $item"
+                find "$item" -type f -exec sed -i '' 's/[[:space:]]*$//' {} \;
+                echo "  [CLEANED] All files in $item (recursively)"
+            else
+                echo "Error: '$item' is a directory. Use the -r or --recursive flag to process contents." >&2
+                return 1
+            fi
+        else
+            echo "Error: Path not found: $item" >&2
+        fi
+    done
+}
+
+trim_trailing_whitespace "$@"

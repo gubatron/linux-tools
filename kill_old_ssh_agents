@@ -10,9 +10,9 @@ if __name__ == '__main__':
   if len(lines) < 3:
       print('kill_old_ssh_agents: You\'re good, nothing to kill')
       sys.exit(0)
-  
+
   for line in lines[:-2]:
       cmd = 'kill -9 ' +  line.split()[1]
       print('kill_old_ssh_agents: ' + cmd)
       os.system(cmd)
-  
+
