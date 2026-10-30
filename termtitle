@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Change the title of the current terminal window/tab.
+# usage: termtitle DBTC Reels      (all arguments are joined with spaces)
+if [ $# -eq 0 ]; then
+	echo "usage: termtitle <title words...>"
+	exit 1
+fi
+TITLE="$*"
+# OSC 0 sets both the icon (tab) name and the window title: Terminal.app, iTerm2, GNOME Terminal, xterm...
+printf '\033]0;%s\007' "${TITLE}"
+# inside tmux, also rename the tmux window
+if [ -n "${TMUX}" ]; then
+	tmux rename-window "${TITLE}"
+fi

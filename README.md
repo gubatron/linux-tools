@@ -8,6 +8,8 @@ All of the commands are available under the MIT License.
 And please, please, fork this, add your own tools, and send back your pull requests, let's see what comes out of this.
 
 Enjoy.
+`termtitle` - Change the title of the current terminal window/tab. `termtitle DBTC Reels`
+
 `trim_trailing_whitespace` - removes all trailing whitespaces to the end of text lines on one, more or --recursive files in folders.
 
 `flush_logs` - rotate and empty journal logs safely
