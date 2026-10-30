@@ -8,6 +8,8 @@ All of the commands are available under the MIT License.
 And please, please, fork this, add your own tools, and send back your pull requests, let's see what comes out of this.
 
 Enjoy.
+`rust_sweep` - Free the disk space Rust builds leave behind, recursively: deletes `target/debug` and, with `cargo-sweep` installed, release artifacts from uninstalled toolchains or unused for `--days` (default 2). `rust_sweep ~/workspace`, `rust_sweep --dry-run .`, or from `.bash_profile` in the background: `(rust_sweep --quiet --every 12 ~/workspace >> ~/.cache/rust_sweep/log 2>&1 &)`
+
 `termtitle` - Change the title of the current terminal window/tab. `termtitle DBTC Reels`
 
 `trim_trailing_whitespace` - removes all trailing whitespaces to the end of text lines on one, more or --recursive files in folders.

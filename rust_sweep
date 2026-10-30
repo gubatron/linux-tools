@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+
+# rust_sweep: frees the disk space Rust builds leave behind, recursively.
+#
+# Finds every Cargo target/ folder under the given folders (nested projects and
+# workspaces included) and in each one:
+#   1. deletes the debug builds (target/debug and target/<triple>/debug)
+#   2. with cargo-sweep installed (cargo install cargo-sweep), deletes release
+#      artifacts built by Rust toolchains that are no longer installed, and those no
+#      build has used in the last --days days. The current release binaries stay.
+#
+# Meant to run unattended, e.g. from .bash_profile in the background:
+#   (rust_sweep --quiet --every 12 ~/workspace >> ~/.cache/rust_sweep/log 2>&1 &)
+rust_sweep() {
+    local days=2 every_hours=0 dry_run=0 quiet=0 min_idle_minutes=15
+    local dirs=()
+    local state_dir="${HOME}/.cache/rust_sweep"
+
+    while [[ "$#" -gt 0 ]]; do
+        case "$1" in
+            -n|--dry-run) dry_run=1; shift ;;
+            -q|--quiet) quiet=1; shift ;;
+            -d|--days) days="$2"; shift 2 ;;
+            -e|--every) every_hours="$2"; shift 2 ;;
+            -h|--help)
+                echo "Usage: rust_sweep [OPTIONS] [folder1] [folder2]..."
+                echo ""
+                echo "Deletes Rust debug builds and stale release artifacts in every Cargo"
+                echo "target/ folder found under the given folders (default: the current one)."
+                echo ""
+                echo "Options:"
+                echo "  -d, --days N    Keep release artifacts used in the last N days (default 2)."
+                echo "  -e, --every H   Do nothing if the last sweep was less than H hours ago,"
+                echo "                  so it can run every time a terminal opens (default 0: always run)."
+                echo "  -n, --dry-run   Only show what would be deleted."
+                echo "  -q, --quiet     Only print what was deleted and a one-line summary."
+                echo "  -h, --help      Show this help message."
+                echo ""
+                echo "A target/ folder written to in the last ${min_idle_minutes} minutes is skipped, since a"
+                echo "build may be running in it."
+                return 0
+                ;;
+            -*)
+                echo "Error: Unknown option '$1'" >&2
+                return 1
+                ;;
+            *) dirs+=("$1"); shift ;;
+        esac
+    done
+    [ ${#dirs[@]} -eq 0 ] && dirs=(".")
+
+    say() { [ "$quiet" -eq 0 ] && echo "$@"; }
+
+    mkdir -p "$state_dir"
+
+    # Only one sweep at a time: every new terminal may start one. mkdir is atomic, so
+    # it works as a lock; a lock left by a sweep that died is taken over.
+    local lock="${state_dir}/lock"
+    if ! mkdir "$lock" 2>/dev/null; then
+        if kill -0 "$(cat "${lock}/pid" 2>/dev/null)" 2>/dev/null; then
+            say "rust_sweep: another sweep is running, skipping."
+            return 0
+        fi
+        rm -rf "$lock" && mkdir "$lock" || return 1
+    fi
+    echo $$ > "${lock}/pid"
+    trap 'rm -rf "'"$lock"'"' RETURN EXIT
+
+    # --every: skip if the last full sweep was recent
+    local stamp="${state_dir}/last_run"
+    if [ "$every_hours" -gt 0 ] && [ -f "$stamp" ] && [ "$dry_run" -eq 0 ]; then
+        local age_minutes=$(( ($(date +%s) - $(cat "$stamp")) / 60 ))
+        if [ "$age_minutes" -lt $(( every_hours * 60 )) ]; then
+            say "rust_sweep: last sweep was ${age_minutes} minutes ago, skipping."
+            return 0
+        fi
+    fi
+
+    local have_sweep=0
+    if cargo sweep --version >/dev/null 2>&1; then
+        have_sweep=1
+    else
+        say "rust_sweep: cargo-sweep not found (cargo install cargo-sweep), only deleting debug builds."
+    fi
+
+    local start_kb end_kb freed_kb=0
+    start_kb=$(df -k / | awk 'NR==2 {print $4}')
+    [ "$dry_run" -eq 1 ] && say "rust_sweep: dry run, nothing will be deleted."
+    say "rust_sweep: $(date)"
+
+    local dir target debug size_kb
+    for dir in "${dirs[@]}"; do
+        # Cargo writes a CACHEDIR.TAG in every target/ folder it creates, which tells
+        # them apart from folders that just happen to be called "target". Don't descend
+        # into a target/ we found, node_modules/ or .git/: they never hold Rust projects.
+        while IFS= read -r -d '' target; do
+
+            if [ -n "$(find "$target" -maxdepth 2 -mmin -"$min_idle_minutes" -print -quit 2>/dev/null)" ]; then
+                say "  [BUSY]    ${target} was written to in the last ${min_idle_minutes} minutes, skipping"
+                continue
+            fi
+
+            # 1. Debug builds: target/debug, and target/<triple>/debug for cross builds
+            for debug in "$target"/debug "$target"/*/debug; do
+                [ -d "$debug" ] || continue
+                size_kb=$(du -sk "$debug" | cut -f1)
+                freed_kb=$((freed_kb + size_kb))
+                echo "  [DEBUG]   $((size_kb / 1024)) MB ${debug}"
+                [ "$dry_run" -eq 0 ] && rm -rf "$debug"
+            done
+
+            # 2. Release artifacts from uninstalled toolchains, then unused ones.
+            # cargo sweep takes the project folder that holds target/.
+            if [ "$have_sweep" -eq 1 ]; then
+                local sweep_args=()
+                [ "$dry_run" -eq 1 ] && sweep_args+=(--dry-run)
+                { cargo sweep --installed "${sweep_args[@]}" "${target%/target}" 2>&1
+                  cargo sweep --time "$days" "${sweep_args[@]}" "${target%/target}" 2>&1; } |
+                    grep -E "(Cleaned|Would clean:) [0-9]" | grep -v " 0.00 B" |
+                    sed "s|^\[INFO\] |  [RELEASE] |"
+            fi
+        done < <(find "$dir" \( -name node_modules -o -name .git \) -prune -o \
+                      -type d -name target -exec test -f {}/CACHEDIR.TAG \; -print0 -prune 2>/dev/null)
+    done
+
+    if [ "$dry_run" -eq 0 ]; then
+        date +%s > "$stamp"
+        end_kb=$(df -k / | awk 'NR==2 {print $4}')
+        echo "rust_sweep: $(date "+%F %R") done, $(( (end_kb - start_kb) / 1024 / 1024 )) GB more free space ($(( end_kb / 1024 / 1024 )) GB free)"
+    else
+        say "rust_sweep: dry run done, debug builds alone would free $((freed_kb / 1024)) MB"
+    fi
+}
+
+# CRITICAL: Execute the function with the script's arguments
+rust_sweep "$@"
