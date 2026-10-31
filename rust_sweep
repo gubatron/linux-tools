@@ -12,7 +12,7 @@
 # Meant to run unattended, e.g. from .bash_profile in the background:
 #   (rust_sweep --quiet --every 12 ~/workspace >> ~/.cache/rust_sweep/log 2>&1 &)
 rust_sweep() {
-    local days=2 every_hours=0 dry_run=0 quiet=0 min_idle_minutes=15
+    local days=2 every_hours=0 dry_run=0 quiet=0 notify=0 min_idle_minutes=15
     local dirs=()
     local state_dir="${HOME}/.cache/rust_sweep"
 
@@ -20,6 +20,7 @@ rust_sweep() {
         case "$1" in
             -n|--dry-run) dry_run=1; shift ;;
             -q|--quiet) quiet=1; shift ;;
+            --notify) notify=1; shift ;;
             -d|--days) days="$2"; shift 2 ;;
             -e|--every) every_hours="$2"; shift 2 ;;
             -h|--help)
@@ -34,6 +35,9 @@ rust_sweep() {
                 echo "                  so it can run every time a terminal opens (default 0: always run)."
                 echo "  -n, --dry-run   Only show what would be deleted."
                 echo "  -q, --quiet     Only print what was deleted and a one-line summary."
+                echo "      --notify    Also tell the terminal it was started from when a sweep starts"
+                echo "                  and how much it freed, for runs in the background with the"
+                echo "                  output going to a log."
                 echo "  -h, --help      Show this help message."
                 echo ""
                 echo "A target/ folder written to in the last ${min_idle_minutes} minutes is skipped, since a"
@@ -50,6 +54,9 @@ rust_sweep() {
     [ ${#dirs[@]} -eq 0 ] && dirs=(".")
 
     say() { [ "$quiet" -eq 0 ] && echo "$@"; }
+    # --notify: write to the terminal itself, since stdout may be going to a log. If the
+    # terminal was closed meanwhile, say nothing.
+    tell() { [ "$notify" -eq 1 ] && { printf '%s\n' "$*" > /dev/tty; } 2>/dev/null; }
 
     mkdir -p "$state_dir"
 
@@ -59,6 +66,7 @@ rust_sweep() {
     if ! mkdir "$lock" 2>/dev/null; then
         if kill -0 "$(cat "${lock}/pid" 2>/dev/null)" 2>/dev/null; then
             say "rust_sweep: another sweep is running, skipping."
+            tell "rust_sweep: a sweep started from another terminal is still running"
             return 0
         fi
         rm -rf "$lock" && mkdir "$lock" || return 1
@@ -72,6 +80,8 @@ rust_sweep() {
         local age_minutes=$(( ($(date +%s) - $(cat "$stamp")) / 60 ))
         if [ "$age_minutes" -lt $(( every_hours * 60 )) ]; then
             say "rust_sweep: last sweep was ${age_minutes} minutes ago, skipping."
+            local next=$(( $(cat "$stamp") + every_hours * 3600 ))
+            tell "rust_sweep: last swept $(date -r "$(cat "$stamp")" "+%R"), next sweep after $(date -r "$next" "+%a %R") (log: ~/.cache/rust_sweep/log)"
             return 0
         fi
     fi
@@ -83,8 +93,9 @@ rust_sweep() {
         say "rust_sweep: cargo-sweep not found (cargo install cargo-sweep), only deleting debug builds."
     fi
 
-    local start_kb end_kb freed_kb=0
+    local start_kb end_kb freed_kb=0 freed_mb
     start_kb=$(df -k / | awk 'NR==2 {print $4}')
+    tell "rust_sweep: cleaning Rust builds under ${dirs[*]/#$HOME/~} in the background (log: ~/.cache/rust_sweep/log)"
     [ "$dry_run" -eq 1 ] && say "rust_sweep: dry run, nothing will be deleted."
     say "rust_sweep: $(date)"
 
@@ -94,7 +105,6 @@ rust_sweep() {
         # them apart from folders that just happen to be called "target". Don't descend
         # into a target/ we found, node_modules/ or .git/: they never hold Rust projects.
         while IFS= read -r -d '' target; do
-
             if [ -n "$(find "$target" -maxdepth 2 -mmin -"$min_idle_minutes" -print -quit 2>/dev/null)" ]; then
                 say "  [BUSY]    ${target} was written to in the last ${min_idle_minutes} minutes, skipping"
                 continue
@@ -126,7 +136,10 @@ rust_sweep() {
     if [ "$dry_run" -eq 0 ]; then
         date +%s > "$stamp"
         end_kb=$(df -k / | awk 'NR==2 {print $4}')
-        echo "rust_sweep: $(date "+%F %R") done, $(( (end_kb - start_kb) / 1024 / 1024 )) GB more free space ($(( end_kb / 1024 / 1024 )) GB free)"
+        freed_mb=$(( (end_kb - start_kb) / 1024 ))
+        [ "$freed_mb" -lt 0 ] && freed_mb=0 # other programs wrote to the disk meanwhile
+        echo "rust_sweep: $(date "+%F %R") done, freed ${freed_mb} MB ($(( end_kb / 1024 / 1024 )) GB free)"
+        tell "rust_sweep: done, freed ${freed_mb} MB ($(( end_kb / 1024 / 1024 )) GB free)"
     else
         say "rust_sweep: dry run done, debug builds alone would free $((freed_kb / 1024)) MB"
     fi
